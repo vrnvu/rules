@@ -1,0 +1,122 @@
+---
+alwaysApply: false
+---
+# Snapshot Testing Rules
+
+## Core Principles
+
+### Data-Driven Testing
+- Focus on comparing input and output data, not implementation details
+- Use textual comparison with diffs instead of hand-written assertions
+- Test complete data transformations from input to output
+- Require rich and readable textual representations of domain objects
+
+### Self-Updating Assertions
+- Use snapshots that can update themselves when behavior changes
+- Store expected values as string literals in source code
+- Enable automatic updates via environment variables or explicit opt-in
+- Fail tests when snapshots don't match, but allow updates
+
+## Snapshot Design
+
+### Location-Aware Snapshots
+- Snapshots must know their source file and line location
+- Use source location to enable automatic updates
+- Store snapshots as first-class values that can be passed around
+- Avoid macro-based APIs that don't compose well
+
+### Textual Representations
+- Serialize complex data structures to readable text
+- Use consistent formatting for predictable comparisons
+- Support JSON, debug strings, and custom formatters
+- Make domain objects easily debuggable through string representation
+
+## Implementation Patterns
+
+### Snapshot Structure
+```python
+class Snapshot:
+    source_location: SourceLocation
+    text: str
+    update_this: bool = False
+    
+    def diff(self, actual: str) -> None:
+        # Compare and optionally update
+        pass
+    
+    def update(self) -> 'Snapshot':
+        # Mark for update
+        pass
+```
+
+### Comparison Functions
+- Direct string comparison for exact matches
+- Line-ending agnostic comparison (handle \n vs \r\n)
+- Support for ignoring volatile parts (timestamps, IDs)
+- Rich diff output showing expected vs actual
+
+### Update Mechanism
+- Update snapshots in-place when tests fail
+- Preserve proper indentation and string literal formatting
+- Track line number changes when multiple snapshots update
+- Only touch filesystem when test would fail otherwise
+
+## Usage Patterns
+
+### Input/Output Testing
+```python
+def check_cli(args: list[str], expected: Snapshot) -> None:
+    result = run_cli(args)
+    expected.diff(result)
+
+# Usage
+check_cli(["--help"], snap(__file__, __line__,
+    """usage: program [options]
+    
+    --help    Show this help message
+    """
+))
+```
+
+### Data Transformation Testing
+- Test complete workflows from input to output
+- Use snapshots for complex data structures
+- Test error messages and edge cases
+- Verify serialization/deserialization round-trips
+
+### API Testing
+- Test complete API responses
+- Verify error handling and status codes
+- Test with realistic data sets
+- Use snapshots for configuration validation
+
+## Best Practices
+
+### Snapshot Content
+- Write snapshots that read like documentation
+- Use consistent formatting and indentation
+- Include context about what the snapshot represents
+- Make snapshots human-readable and reviewable
+
+### Update Strategy
+- Use environment variables for bulk updates (UPDATE_SNAPSHOTS=true)
+- Review all snapshot changes before committing
+- Use version control to track snapshot evolution
+- Update snapshots one at a time to avoid line number issues
+
+### Error Handling
+- Provide clear diff output on mismatches
+- Show both expected and actual values
+- Use proper error types for different failure modes
+- Support ignoring volatile fields with special markers
+
+## Anti-Patterns
+
+- Hand-written assertions for complex data structures
+- Testing implementation details instead of data transformations
+- Snapshots that are hard to read or understand
+- Manual snapshot updates without review
+- Snapshots that break on minor formatting changes
+- Testing individual components instead of complete workflows
+- Snapshots without proper source location tracking
+- Macro-based snapshot APIs that don't compose
