@@ -2,6 +2,7 @@
 
 pub mod cb;
 pub mod count;
+pub mod sim;
 pub mod time;
 
 pub use cb::*;

@@ -38,7 +38,10 @@ impl CircuitBreaker for CountCB {
 
                 let result = f();
                 match result {
-                    Ok(_) => CircuitResult::Succeeded,
+                    Ok(_) => {
+                        self.closed_failures = 0;
+                        CircuitResult::Succeeded
+                    }
                     Err(_) => {
                         self.closed_failures += 1;
                         if self.closed_failures == self.closed_failures_threshold {
@@ -72,7 +75,6 @@ impl CircuitBreaker for CountCB {
                     }
                     Err(_) => {
                         self.state = CircuitState::Open;
-                        self.closed_failures = 0;
                         self.half_open_attempts = 0;
                         CircuitResult::Failed
                     }
