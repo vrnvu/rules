@@ -1,64 +1,47 @@
-//! Simple Circuit Breaker
-//!
-//! Minimal implementation.
+//! Count-based Circuit Breaker implementation
 
-/// Circuit breaker states
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CircuitState {
-    Closed,
-    Open,
-    HalfOpen,
-}
+use crate::cb::{CircuitBreaker, CircuitResult, CircuitState};
 
-/// Circuit breaker result
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum CircuitResult {
-    Rejected,
-    Failed,
-    Succeeded,
-}
-
-/// Simple circuit breaker
 #[derive(Debug)]
-pub struct CircuitBreaker {
+pub struct CountCB {
     state: CircuitState,
-    failure_count: u8,
-    failure_threshold: u8,
+    closed_failures: u8,
+    closed_failures_threshold: u8,
     half_open_attempts: u8,
     half_open_threshold: u8,
 }
 
-impl CircuitBreaker {
-    /// Create new circuit breaker with custom thresholds
+impl CountCB {
     pub fn new(failure_threshold: u8, half_open_threshold: u8) -> Self {
         assert!(failure_threshold > 0);
         assert!(half_open_threshold > 0);
 
-        CircuitBreaker {
+        CountCB {
             state: CircuitState::Closed,
-            failure_count: 0,
-            failure_threshold,
+            closed_failures: 0,
+            closed_failures_threshold: failure_threshold,
             half_open_attempts: 0,
             half_open_threshold,
         }
     }
+}
 
-    /// Execute operation through circuit breaker
-    pub fn call<F, R>(&mut self, f: F) -> CircuitResult
+impl CircuitBreaker for CountCB {
+    fn call<F, R>(&mut self, f: F) -> CircuitResult
     where
         F: FnOnce() -> Result<R, ()>,
     {
         match self.state {
             CircuitState::Closed => {
-                assert!(self.failure_count < self.failure_threshold);
+                assert!(self.closed_failures < self.closed_failures_threshold);
                 assert!(self.half_open_attempts == 0);
 
                 let result = f();
                 match result {
                     Ok(_) => CircuitResult::Succeeded,
                     Err(_) => {
-                        self.failure_count += 1;
-                        if self.failure_count == self.failure_threshold {
+                        self.closed_failures += 1;
+                        if self.closed_failures == self.closed_failures_threshold {
                             self.state = CircuitState::Open;
                         }
                         CircuitResult::Failed
@@ -66,7 +49,7 @@ impl CircuitBreaker {
                 }
             }
             CircuitState::Open => {
-                assert!(self.failure_count == self.failure_threshold);
+                assert!(self.closed_failures == self.closed_failures_threshold);
                 assert!(self.half_open_attempts < self.half_open_threshold);
 
                 self.half_open_attempts += 1;
@@ -77,19 +60,19 @@ impl CircuitBreaker {
                 CircuitResult::Rejected
             }
             CircuitState::HalfOpen => {
-                assert!(self.failure_count == self.failure_threshold);
+                assert!(self.closed_failures == self.closed_failures_threshold);
                 assert!(self.half_open_attempts < self.half_open_threshold);
 
                 let result = f();
                 match result {
                     Ok(_) => {
                         self.state = CircuitState::Closed;
-                        self.failure_count = 0;
+                        self.closed_failures = 0;
                         CircuitResult::Succeeded
                     }
                     Err(_) => {
                         self.state = CircuitState::Open;
-                        self.failure_count = 0;
+                        self.closed_failures = 0;
                         self.half_open_attempts = 0;
                         CircuitResult::Failed
                     }
@@ -98,8 +81,7 @@ impl CircuitBreaker {
         }
     }
 
-    /// Get current state
-    pub fn state(&self) -> CircuitState {
+    fn state(&self) -> CircuitState {
         self.state
     }
 }
@@ -111,24 +93,24 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_zero_failure_threshold_panics() {
-        CircuitBreaker::new(0, 1);
+        CountCB::new(0, 1);
     }
 
     #[test]
     #[should_panic]
     fn test_zero_half_open_threshold_panics() {
-        CircuitBreaker::new(1, 0);
+        CountCB::new(1, 0);
     }
 
     #[test]
     #[should_panic]
     fn test_both_zero_thresholds_panic() {
-        CircuitBreaker::new(0, 0);
+        CountCB::new(0, 0);
     }
 
     #[test]
     fn test_closed_success() {
-        let mut cb = CircuitBreaker::new(2, 1);
+        let mut cb = CountCB::new(2, 1);
         assert_eq!(cb.state(), CircuitState::Closed);
 
         let result = cb.call(|| Ok::<(), ()>(()));
@@ -138,7 +120,7 @@ mod tests {
 
     #[test]
     fn test_closed_failure_stays_closed() {
-        let mut cb = CircuitBreaker::new(2, 1);
+        let mut cb = CountCB::new(2, 1);
         assert_eq!(cb.state(), CircuitState::Closed);
 
         let result = cb.call(|| Err::<(), ()>(()));
@@ -148,7 +130,7 @@ mod tests {
 
     #[test]
     fn test_closed_to_open() {
-        let mut cb = CircuitBreaker::new(2, 1);
+        let mut cb = CountCB::new(2, 1);
         assert_eq!(cb.state(), CircuitState::Closed);
 
         let result = cb.call(|| Err::<(), ()>(()));
@@ -162,7 +144,7 @@ mod tests {
 
     #[test]
     fn test_open_rejects_calls() {
-        let mut cb = CircuitBreaker::new(2, 2);
+        let mut cb = CountCB::new(2, 2);
         assert_eq!(cb.state(), CircuitState::Closed);
 
         let result = cb.call(|| Err::<(), ()>(()));
@@ -180,7 +162,7 @@ mod tests {
 
     #[test]
     fn test_open_to_halfopen() {
-        let mut cb = CircuitBreaker::new(2, 1);
+        let mut cb = CountCB::new(2, 1);
         assert_eq!(cb.state(), CircuitState::Closed);
 
         let result = cb.call(|| Err::<(), ()>(()));
@@ -198,7 +180,7 @@ mod tests {
 
     #[test]
     fn test_halfopen_success_to_closed() {
-        let mut cb = CircuitBreaker::new(2, 1);
+        let mut cb = CountCB::new(2, 1);
         assert_eq!(cb.state(), CircuitState::Closed);
 
         let result = cb.call(|| Err::<(), ()>(()));
@@ -220,7 +202,7 @@ mod tests {
 
     #[test]
     fn test_halfopen_failure_to_open() {
-        let mut cb = CircuitBreaker::new(2, 1);
+        let mut cb = CountCB::new(2, 1);
         assert_eq!(cb.state(), CircuitState::Closed);
 
         let result = cb.call(|| Err::<(), ()>(()));

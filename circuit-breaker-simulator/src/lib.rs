@@ -1,8 +1,9 @@
-//! Basic Circuit Breaker
-//!
-//! A simple circuit breaker implementation following assertion style rules.
-//! Provides basic circuit breaker functionality with state transitions and metrics.
+//! Circuit Breaker Simulator Library
 
-pub mod circuit_breaker;
+pub mod cb;
+pub mod count;
+pub mod time;
 
-pub use circuit_breaker::*;
+pub use cb::*;
+pub use count::*;
+pub use time::*;
