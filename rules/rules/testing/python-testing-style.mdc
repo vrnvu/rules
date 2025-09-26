@@ -1,0 +1,44 @@
+---
+alwaysApply: false
+tags: [language:python, concern:testing]
+when: writing Python tests
+then: test public APIs with integration-style, fast-by-default checks
+---
+
+### python-testing-style rules
+
+- **Test public API only**
+  - Exercise functions/classes users call; avoid testing internals
+  - Validate observable behavior and end-to-end workflows
+- **Integration/E2E over unit**
+  - Prefer integration and data-driven tests with clear input/output pairs
+  - Cover success and error paths for every public API
+- **Parallel & isolated**
+  - Assume dirty environment; do not share state; no cleanup
+  - Use unique data per test; make tests order-independent and parallelizable
+- **Check functions**
+  - Use simple checks like `assert got == want` after calling the public API
+  - Keep tests self-explanatory; no commentary
+- **Branch coverage**
+  - Ensure each `if` has both true/false covered; test boundary cases
+- **No mocks unless necessary**
+  - Avoid mocking internals; prefer real workflows and deterministic inputs
+- **Performance**
+  - Keep tests fast; small datasets; avoid network/disk unless part of API
+- **Property testing**
+  - Use Hypothesis/property-based tests for invariants and edge cases when valuable
+
+Example with pytest:
+```python
+def test_select_small_requests_happy_path():
+    reqs = [Request("a", 10), Request("b", 15), Request("c", 30)]
+    got = select_small_requests(reqs, max_total=30)
+    want = [Request("a", 10), Request("b", 15)]
+    assert got == want
+
+def test_select_small_requests_rejects_negative():
+    reqs = [Request("a", -1)]
+    import pytest
+    with pytest.raises(ValueError):
+        select_small_requests(reqs, max_total=100)
+```

@@ -1,0 +1,47 @@
+---
+alwaysApply: false
+tags: [language:go, concern:assertions]
+when: writing Go code or tests
+then: validate pre/postconditions; prefer explicit if-then checks; panic only for invariants
+---
+
+### go-assertion-style rules
+
+- **Two-party contracts**
+  - Validate the same pre/postconditions at call sites and function boundaries
+  - Use lightweight checks as airlocks between packages
+- **Implication assertions**
+  - Prefer if-then checks to boolean algebra
+    - Good: `if u.Authenticated { if u.SessionID == "" { panic("session required") } }`
+    - Avoid: implicit reliance on zero values without checks
+- **Preconditions and postconditions**
+  - At function start, check required shapes/ranges; return errors for runtime conditions
+  - At return, validate guarantees on outputs (lengths, ranges, relations)
+- **Panics vs errors**
+  - Use `panic` only for programmer errors/invariants; return `error` for expected runtime failures
+- **Performance**
+  - Keep checks O(1) or linear in touched data; avoid allocations in assertions
+- **State validation**
+  - Validate state transitions at critical points (open/closed, started/stopped)
+  - For slices/buffers, check boundaries and capacities explicitly
+- **Readability**
+  - One check per fact; clear messages
+
+Example:
+```go
+func Process(items []int) []int {
+    if len(items) == 0 { panic("items must be non-empty") }
+    for _, v := range items { if v < -1<<60 { panic("sentinel not allowed") } }
+
+    var out []int
+    for _, v := range items { if v >= 0 { out = append(out, v) } }
+
+    if len(out) > len(items) { panic("size invariant") }
+    if len(out) == 0 {
+        allNeg := true
+        for _, v := range items { if v >= 0 { allNeg = false; break } }
+        if !allNeg { panic("filtering invariant") }
+    }
+    return out
+}
+```

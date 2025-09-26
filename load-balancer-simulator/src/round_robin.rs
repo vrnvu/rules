@@ -84,11 +84,11 @@ mod tests {
         let mut steps = Vec::with_capacity(count);
 
         for _ in 0..count {
-            let choice = rng.gen_range(0..3);
+            let choice = rng.random_range(0..3);
             let step = match choice {
                 0 => Step::SelectServer,
-                1 => Step::MarkHealthy(rng.gen_range(0..server_count)),
-                _ => Step::MarkUnhealthy(rng.gen_range(0..server_count)),
+                1 => Step::MarkHealthy(rng.random_range(0..server_count)),
+                _ => Step::MarkUnhealthy(rng.random_range(0..server_count)),
             };
             steps.push(step);
         }

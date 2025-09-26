@@ -1,0 +1,277 @@
+---
+alwaysApply: false
+tags: [language:rust, concern:assertions]
+when: writing Rust code or tests
+then: use two-party contracts; assert pre/postconditions; implication assertions with if-blocks
+---
+
+---
+description: Rust assertion style rules for defensive programming
+globs:
+alwaysApply: true
+---
+
+# Rust Assertion Style Rules
+
+## Reference
+
+Our assertion style is based on TigerBeetle's design by contract principles:
+- [It Takes Two to Contract](https://tigerbeetle.com/blog/2023-12-27-it-takes-two-to-contract/) - Two-party contracts and airlocks
+- [Asserting Implications](https://tigerbeetle.com/blog/2025-05-26-asserting-implications/) - Clear implication assertions
+
+## Core Principles
+
+### Two-Party Contracts
+- Assert the same conditions at call site and definition site
+- Both parties verify the same invariants
+- Creates airlocks between code boundaries
+
+**Airlocks**: Assertions create "airlocks" - safe boundaries between code sections. Between two assertions, an invariant is guaranteed to hold, so we're confident about the code properties. Like an airlock on a spaceship, it creates a controlled transition zone.
+
+**Two-Party Contracts**: Real contracts always involve two parties. Assert the same conditions at both the call site and definition site. This creates mutual agreement on function behavior and helps catch inconsistencies early.
+
+### Multiple Code Paths
+- Multiple callers can reach the same function
+- Assertions in function don't know which code path was taken
+- Call site assertions verify the specific path taken
+
+**Multiple Callers Problem**: If multiple code paths can reach the same function, when we add assertions to the function we don't know what code path we took to reach that function! That's why we need "two to contract" - we can have multiple callers, each with different assumptions about the state.
+
+## Assertion Patterns
+
+### Paired Assertions
+- Assert preconditions at function entry
+- Assert postconditions at function exit
+- Assert the same conditions at call site and definition site
+
+## Assertion style
+- Never add // precondition or //postcondition comments, they are redundant
+
+```rust
+// Call site
+let result = process_data(&input_data);
+assert!(result.is_some());
+assert!(result.as_ref().unwrap().len() <= input_data.len());
+
+// Definition site  
+fn process_data(data: &[i32]) -> Option<Vec<i32>> {
+    assert!(!data.is_empty());
+    // ... processing logic ...
+    assert!(result.len() <= data.len());
+    Some(result)
+}
+```
+
+### Implication Assertions
+- Use if statements for implications: `if condition { assert!(consequence) }`
+- One line per implication
+- Avoid logical operators for implications
+
+```rust
+// Good: Clear implication
+if user.is_authenticated {
+    assert!(user.session_id.is_some());
+}
+
+// Bad: Hard to read logical form
+assert!(!user.is_authenticated || user.session_id.is_some());
+```
+
+## TigerBeetle Assertion Patterns
+
+### Paired Assertions with Different Paths
+- Assert the same logical condition through different code paths
+- Use hash-chaining and checksums for cryptographic binding
+- Verify state consistency across different replicas/processes
+- Test that different paths lead to the same result
+
+```rust
+// Example: Two different paths to the same state
+// Path 1: Normal processing from empty state
+let state1 = process_events_from_empty(events);
+
+// Path 2: Recovery from snapshot
+let state2 = process_events_from_snapshot(snapshot, remaining_events);
+
+// Both paths should result in identical state
+assert_eq!(state1.checksum(), state2.checksum());
+```
+
+### Readability Through Assertions
+- Use assertions to make function semantics immediately clear
+- Assert return values to document expected behavior
+- Use assertions as documentation that can't get out of sync
+
+```rust
+// Without assertion: unclear semantics
+let filled = compaction.fill_immutable_values(target);
+
+// With assertion: semantics immediately clear
+let filled = compaction.fill_immutable_values(target);
+assert!(filled <= target.len);
+if filled == 0 {
+    assert!(Table.usage == .secondary_index);
+}
+```
+
+## Implementation Guidelines
+
+### Preconditions and Postconditions
+- Assert what the function requires at the beginning
+- Assert what the function guarantees at the end
+- Assert invariants throughout execution
+
+```rust
+fn binary_search(haystack: &[i32], needle: i32) -> bool {
+    // Preconditions
+    assert!(!haystack.is_empty());
+    assert!(haystack.windows(2).all(|w| w[0] <= w[1]));
+    
+    // ... search logic ...
+    
+    // Postconditions
+    assert!(result == true || result == false);
+    if result {
+        assert!(haystack.contains(&needle));
+    } else {
+        assert!(!haystack.contains(&needle));
+    }
+    
+    result
+}
+```
+
+### State Validation
+- Assert invariants at critical points
+- Validate state transitions explicitly
+- Use assertions to document expected state relationships
+
+```rust
+struct Database {
+    connected: bool,
+    transaction_active: bool,
+}
+
+impl Database {
+    fn connect(&mut self) -> Result<(), String> {
+        assert!(!self.connected, "Already connected");
+        // ... connection logic ...
+        self.connected = true;
+        assert!(self.connected);
+        Ok(())
+    }
+    
+    fn begin_transaction(&mut self) -> Result<(), String> {
+        assert!(self.connected, "Must be connected to begin transaction");
+        assert!(!self.transaction_active, "Transaction already active");
+        // ... transaction logic ...
+        self.transaction_active = true;
+        Ok(())
+    }
+}
+```
+
+### TigerBeetle Assertion Patterns
+
+#### Memory Layout Assertions
+- Assert data structure alignment and size constraints
+- Validate buffer boundaries and capacity limits
+- Check memory pool invariants and free space
+
+```rust
+// TigerBeetle style: Memory layout validation
+struct Table {
+    data: [u8; 4096],
+    used: usize,
+}
+
+impl Table {
+    fn write(&mut self, data: &[u8]) -> Result<(), String> {
+        assert!(self.used + data.len() <= self.data.len(), "Buffer overflow");
+        assert!(data.len() > 0, "Cannot write empty data");
+        
+        // ... write logic ...
+        
+        assert!(self.used <= self.data.len(), "Used size invariant");
+        Ok(())
+    }
+}
+```
+
+#### Cache Line Alignment Assertions
+- Assert cache line boundaries for performance-critical data
+- Validate alignment requirements for zero-copy operations
+
+```rust
+// TigerBeetle style: Cache alignment validation
+#[repr(align(64))]
+struct CacheAlignedBuffer {
+    data: [u8; 64],
+}
+
+impl CacheAlignedBuffer {
+    fn new() -> Self {
+        let buffer = Self { data: [0; 64] };
+        assert!(std::ptr::addr_of!(buffer) as usize % 64 == 0, "Cache alignment");
+        buffer
+    }
+}
+```
+
+#### Zero-Copy Operation Assertions
+- Assert slice boundaries and lifetime constraints
+- Validate that operations don't allocate memory
+
+```rust
+// TigerBeetle style: Zero-copy validation
+fn process_slice(data: &[u8], offset: usize, len: usize) -> &[u8] {
+    assert!(offset < data.len(), "Offset out of bounds");
+    assert!(offset + len <= data.len(), "Slice out of bounds");
+    assert!(len > 0, "Empty slice");
+    
+    let result = &data[offset..offset + len];
+    assert!(result.len() == len, "Slice length invariant");
+    result
+}
+```
+
+### Error Detection
+- Use assertions to catch programmer errors early
+- Assertions should fail fast with clear messages
+- Don't use assertions for expected runtime conditions
+- Use `debug_assert!` for expensive checks that should be disabled in release builds
+
+## Best Practices
+
+### Assertion Placement
+- Place assertions at function boundaries
+- Assert invariants at loop beginnings
+- Validate state after complex operations
+- Use assertions to document assumptions
+
+### Readability
+- Write assertions that read like documentation
+- Use descriptive variable names
+- Group related assertions
+- Make assertions self-documenting
+
+### Performance
+- Assertions should be fast to evaluate
+- Avoid expensive computations in assertions
+- Use `debug_assert!` for expensive checks
+- Consider disabling in production if needed
+
+## Anti-Patterns
+
+- Asserting obvious conditions
+- Asserting implementation details
+- Using assertions for control flow
+- Skipping assertions at function boundaries
+- Assuming callers will validate inputs
+- Generic assertion messages
+- Assertions without explanatory messages
+- Missing memory layout assertions for performance-critical data
+- Not validating cache line alignment for zero-copy operations
+- Skipping buffer boundary checks in low-level operations
+- Not asserting invariants in memory pool management
+- Missing assertions for static allocation constraints

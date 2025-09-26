@@ -26,11 +26,9 @@ impl LoadBalancer for LeastConnections {
         let mut min_connections = usize::MAX;
 
         for (i, server) in self.servers.iter().enumerate() {
-            if server.state == ServerState::Healthy {
-                if self.connection_counts[i] < min_connections {
-                    min_connections = self.connection_counts[i];
-                    best_server = Some(i);
-                }
+            if server.state == ServerState::Healthy && self.connection_counts[i] < min_connections {
+                min_connections = self.connection_counts[i];
+                best_server = Some(i);
             }
         }
 
@@ -81,11 +79,11 @@ mod tests {
         let mut steps = Vec::with_capacity(count);
 
         for _ in 0..count {
-            let choice = rng.gen_range(0..3);
+            let choice = rng.random_range(0..3);
             let step = match choice {
                 0 => Step::SelectServer,
-                1 => Step::MarkHealthy(rng.gen_range(0..server_count)),
-                _ => Step::MarkUnhealthy(rng.gen_range(0..server_count)),
+                1 => Step::MarkHealthy(rng.random_range(0..server_count)),
+                _ => Step::MarkUnhealthy(rng.random_range(0..server_count)),
             };
             steps.push(step);
         }

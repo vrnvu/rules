@@ -1,0 +1,47 @@
+---
+alwaysApply: false
+tags: [language:python, concern:assertions]
+when: writing Python code or tests
+then: follow two-party contracts; use if-then assertions; assert pre/postconditions
+---
+
+### python-assertion-style rules
+
+- **Two-party contracts**
+  - Assert the same pre/postconditions at both call sites and function boundaries
+  - Use assertions as airlocks between modules to document invariants
+- **Implication assertions**
+  - Prefer if-then assertions over boolean algebra
+    - Good: `if user.is_authenticated: assert user.session_id is not None`
+    - Avoid: `assert (not user.is_authenticated) or (user.session_id is not None)`
+- **Preconditions and postconditions**
+  - At function start, assert required shapes/types/ranges (cheap checks only)
+  - At return, assert guarantees on outputs (shape, range, relation to inputs)
+- **Assertions vs errors**
+  - Use `assert` for programmer errors/invariants, not user/runtime validation
+  - Use exceptions (e.g., `ValueError`, `TypeError`) for expected runtime conditions
+- **Performance**
+  - Keep assertions O(1) or linear in touched data; gate heavier checks behind debug flags
+  - `python -O` can remove asserts; do not rely on them for runtime safety
+- **State validation**
+  - Assert state transitions at critical points (e.g., connection open/closed)
+  - For buffers/slices, assert boundaries and non-empty constraints
+- **Readability**
+  - One assertion per fact; clear messages when helpful; avoid generic messages
+
+Example:
+```python
+from typing import Iterable
+
+def process(items: list[int]) -> list[int]:
+    assert isinstance(items, list)
+    assert len(items) > 0
+    assert all(isinstance(x, int) for x in items)
+
+    result = [x for x in items if x >= 0]
+
+    assert len(result) <= len(items)
+    if not result:
+        assert all(x < 0 for x in items)
+    return result
+```

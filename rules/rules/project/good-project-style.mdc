@@ -1,0 +1,70 @@
+---
+alwaysApply: true
+---
+
+### good-project-style (always applied)
+
+- **Clarity over cleverness**
+  - Prefer explicit, readable code and docs; avoid magic
+- **Two-party contracts everywhere**
+  - Assert/validate the same invariants at boundaries (callers and callees)
+  - Use assertions as airlocks; document guarantees and requirements
+- **Public API first**
+  - Design for users; test only public surfaces; stable, minimal APIs
+- **Simplicity and cohesion**
+  - One responsibility per module/file; minimize dependencies and abstractions
+  - Prefer functions and composition over inheritance/hierarchies
+- **Deterministic performance**
+  - Set explicit limits (CPU/mem/IO); pre-allocate when sizes are known
+  - Avoid unnecessary allocations and copying; prefer zero-copy and slices/views
+- **Error handling discipline**
+  - Fail fast on invalid inputs; precise error types/messages
+  - No panic-driven control flow; use language-idiomatic error mechanisms
+- **Naming and structure**
+  - Descriptive, unambiguous names; consistent casing per language
+  - Keep related logic together; avoid premature extraction
+- **Testing strategy**
+  - Integration/data-driven tests; cover branches and boundaries
+  - Property tests for invariants; parallelizable and order-independent
+- **Documentation that can’t drift**
+  - Encode expectations as assertions and tests rather than comments
+  - Keep README and top-level docs short, high-signal, decision-focused
+- **No over-engineering**
+  - Avoid complex generics/metaprogramming unless necessary
+  - Prefer iterative solutions over recursion in hot paths
+- **Tooling and quality gates**
+  - Linting must be clean; CI runs tests and coverage; fast feedback
+  - Reproducible builds; pinned dependencies where practical
+
+### Basic Things (always applied)
+
+Reference: [Basic Things](https://matklad.github.io/2024/03/22/basic-things.html)
+
+- README as a landing page: Keep a short, link-heavy entry point; avoid sprawling documents.
+- Dev docs: Maintain a `docs/` folder with a small landing page and clear structure.
+- User docs: Provide concise, task-oriented documentation for users separate from dev docs.
+- Structured dev docs: Curated documents like `ARCHITECTURE.md` and `CONTRIBUTING.md` explaining code and social architecture.
+- Unstructured ingest-optimized dev docs: Allow quick, append-only topical guides for notes and style decisions.
+- User website, beware of content gravity: Build a simple site early; choose a durable, low-complexity stack.
+- Ingest-optimized internal website: A lightweight internal space for metrics, dashboards, and ad-hoc automation.
+- Meta documentation process: Encourage everyone to update style/process docs; uplift review comments into docs.
+- Clear code review protocol: Define ownership, assignment vs request, reviewer responsibilities, and goals of review.
+- Automated check for no large blobs: Enforce repo size hygiene in CI to keep clones fast.
+- Not rocket science rule (NRSR): Main always passes a well-defined, stable set of checks.
+- Main always green: The tip of `main` must point to a commit that passes all checks.
+- No semi tests: If a check isn’t in NRSR, it’s not part of the project; delete flaky or ad-hoc tests.
+- No flaky tests: CI should make flakiness immediately everyone’s problem; fix or delete.
+- Single command build: One entry point to build everything consistently.
+- Reproducible build: Deterministic outputs; pin dependencies where practical.
+- Fixed build entry points: Few O(1) entry points; lint is a kind of test, not a separate path.
+- CI delegates to build system: CI should invoke the canonical build/test entry points.
+- Space for ad-hoc automation: Provide a place to script in the project’s main language.
+- Overarching testing infrastructure: Data-oriented testing harness with clear input/output and assertions.
+- Fast/Slow test split: Run fast tests by default locally; run both in CI; make slow explicit.
+- Snapshot testing: Introduce snapshot testing early for exploratory and UI-like outputs.
+- Benchmarks are tests: Ensure benchmarks compile/run by adding tiny-input test invocations.
+- Macro metrics tracking: Track build time, test time, artifact size over commits; visualize trends.
+- Fuzz tests are tests: Add small-seed tests to keep fuzzing code exercised; integrate dashboards for failing seeds.
+- Level-triggered display for fuzzing: Show failing seeds per recent commits rather than filing issues.
+- Inverse triangle inequality: Prefer incremental steps (A→B→C) over big-bang changes (A→C).
+- Weekly releases: Ship on cadence; start the release machinery early even before full readiness.

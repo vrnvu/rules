@@ -1,0 +1,11 @@
+---
+alwaysApply: true
+tags: [project, visibility]
+---
+
+### rules-visibility
+
+When: loading rules
+Then: log that project rules are active; use `/rules status` to verify.
+
+This file exists to make it obvious in status outputs that `.cursor/rules` is being applied.

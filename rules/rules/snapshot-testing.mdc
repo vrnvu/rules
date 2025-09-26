@@ -1,0 +1,76 @@
+---
+alwaysApply: false
+---
+# Snapshot Testing Rules
+
+## Reference
+- [Snapshot Testing For the Masses](https://tigerbeetle.com/blog/2024-05-14-snapshot-testing-for-the-masses/) - Self-updating assertions and location-aware snapshots
+- [Dead Simple Snapshot Testing](https://kristoff.it/blog/dead-simple-snapshot-testing/) - File-based snapshots with git diff for verification
+
+## Core Concept
+
+Snapshot testing compares actual output against stored "snapshots" to detect unintended changes. Two main approaches:
+
+### 1. Inline Snapshots (TigerBeetle Pattern)
+- Store expected output as string literals in source code
+- Use location-aware snapshots that know their file/line
+- Auto-update snapshots when behavior changes
+- Start with empty snapshots, let infrastructure populate them
+
+### 2. File-Based Snapshots (Loris Cro Pattern)  
+- Store snapshots as committed files in version control
+- Use git diff to detect changes and verify correctness
+- Manual approval: commit snapshots to accept behavior changes
+- Perfect for integration tests where files are input/output units
+
+## Implementation Rules
+
+### Snapshot Content
+- Make snapshots human-readable and reviewable
+- Use consistent formatting for predictable comparisons
+- Exclude volatile data (timestamps, IDs, random values)
+- Write snapshots that read like documentation
+
+### Update Workflow
+- **Inline snapshots**: Auto-update when tests fail, review changes
+- **File snapshots**: Use `git diff` to review, commit to accept changes
+- Always review snapshot changes before committing
+- Use version control to track snapshot evolution
+
+## Anti-Patterns
+
+- Hand-written assertions for complex data structures
+- Testing implementation details instead of data transformations  
+- Snapshots that are hard to read or understand
+- Manual snapshot updates without review
+- Snapshots that break on minor formatting changes
+- Testing individual components instead of complete workflows
+
+## Quick Examples
+
+### Inline Snapshot (Rust/Zig style)
+```rust
+// Start empty, infrastructure populates
+try check_sort(&[3, 2, 1], snap(@src(), ""));
+
+// After first run, becomes:
+try check_sort(&[3, 2, 1], snap(@src(),
+    \\[1, 2, 3]
+));
+```
+
+### File-Based Snapshot (Build system)
+```bash
+# Directory structure
+tests/
+└── test-case/
+    ├── snapshot/          # Expected output
+    │   └── output.txt
+    └── input/             # Input files
+        └── config.yaml
+
+# Workflow: build → diff → commit (if approved)
+zig build test
+git diff tests/  # Review changes
+git add tests/ && git commit  # Accept changes
+```

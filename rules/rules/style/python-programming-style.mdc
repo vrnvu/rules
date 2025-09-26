@@ -1,0 +1,61 @@
+---
+alwaysApply: false
+tags: [language:python, concern:programming]
+when: writing or modifying Python code
+then: keep functions simple, typed, and explicit; avoid over-engineering
+---
+
+### python-programming-style rules
+
+- **Simplicity first**
+  - Prefer straightforward functions and data transformations over class hierarchies
+  - Keep functions small and pure when possible; explicit parameters and return values
+- **Data over objects**
+  - Favor plain data structures (`dict`, `list`, `tuple`, `dataclass`) over deep inheritance
+  - Use composition instead of inheritance
+- **Types and clarity**
+  - Use typing (`list[int]`, `dict[str, Any]`) and `@dataclass` for clarity
+  - Avoid `Any` unless necessary; prefer precise types
+- **Control flow**
+  - Guard clauses and early returns
+  - Exhaustively handle small enums/sets (via `Enum`/`Literal`)
+- **Performance and memory**
+  - Avoid unnecessary allocations; prefer generators/iterators
+  - Pre-size lists when feasible; reuse buffers where appropriate
+  - Avoid copying large data; pass views/slices where possible
+- **Error handling**
+  - Use exceptions; validate inputs explicitly and fail fast with precise types
+  - No panic-driven control flow
+- **No over-engineering**
+  - Minimize abstractions and metaprogramming
+  - Avoid recursion in hot paths; prefer iteration
+- **Formatting & naming**
+  - Descriptive names; avoid abbreviations
+  - Multi-line readable expressions; avoid clever one-liners
+- **Determinism and limits**
+  - Set explicit upper bounds on loops and resource usage
+  - Consider bandwidth/latency and data size early
+
+Example:
+```python
+from dataclasses import dataclass
+from typing import Iterable
+
+@dataclass
+class Request:
+    id: str
+    size_bytes: int
+
+def select_small_requests(requests: Iterable[Request], max_total: int) -> list[Request]:
+    total = 0
+    selected: list[Request] = []
+    for req in requests:
+        if req.size_bytes < 0:
+            raise ValueError("size_bytes must be non-negative")
+        if total + req.size_bytes > max_total:
+            break
+        selected.append(req)
+        total += req.size_bytes
+    assert sum(r.size_bytes for r in selected) == total
+    return selected
+```

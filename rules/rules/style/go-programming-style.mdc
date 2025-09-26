@@ -1,0 +1,50 @@
+---
+alwaysApply: false
+tags: [language:go, concern:programming]
+when: writing or modifying Go code
+then: favor simple functions, composition, and explicit errors; avoid over-engineering
+---
+
+### go-programming-style rules
+
+- **Simplicity first**
+  - Prefer simple functions and data transformations over type hierarchies
+  - Small, focused functions; explicit parameters and returns
+- **Data over objects**
+  - Prefer structs and plain functions; composition over embedding when clearer
+- **Control flow**
+  - Guard clauses and early returns; avoid deep nesting
+  - Exhaustively handle small enums via iota-backed types and switch
+- **Performance and memory**
+  - Pre-size slices with `make` when size known; reuse buffers
+  - Avoid copying large data; pass slices/refs; minimize allocations
+- **Error handling**
+  - Return `error` values; classify sentinel vs wrapped errors
+  - Fail fast on invalid inputs; no panic-driven control flow
+- **No over-engineering**
+  - Minimize generics and reflection; avoid recursion in hot paths
+- **Naming & formatting**
+  - Descriptive names; avoid abbreviations; idiomatic Go style
+- **Determinism and limits**
+  - Set explicit upper bounds on loops/resources; consider bandwidth/latency
+
+Example:
+```go
+type Request struct { ID string; Size int }
+
+func SelectSmallRequests(reqs []Request, maxTotal int) ([]Request, error) {
+    if maxTotal < 0 { return nil, fmt.Errorf("maxTotal must be non-negative") }
+    total := 0
+    out := make([]Request, 0, len(reqs))
+    for _, r := range reqs {
+        if r.Size < 0 { return nil, fmt.Errorf("size must be non-negative") }
+        if total + r.Size > maxTotal { break }
+        out = append(out, r)
+        total += r.Size
+    }
+    if sum := func() int { s:=0; for _, r := range out { s += r.Size }; return s }(); sum != total {
+        panic("accounting invariant")
+    }
+    return out, nil
+}
+```

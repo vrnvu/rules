@@ -1,0 +1,48 @@
+---
+alwaysApply: false
+tags: [language:java, concern:assertions]
+when: writing Java code or tests
+then: pair pre/postconditions; prefer if-then checks; use exceptions for runtime validation
+---
+
+### java-assertion-style rules
+
+- **Two-party contracts**
+  - Assert the same pre/postconditions at call sites and method boundaries
+  - Use checks as airlocks between packages/modules
+- **Implication assertions**
+  - Prefer if-then checks to boolean algebra
+    - Good: `if (user.isAuthenticated()) { assert user.getSessionId() != null; }`
+    - Avoid: `assert !user.isAuthenticated() || user.getSessionId() != null;`
+- **Preconditions and postconditions**
+  - At method start, validate required shapes/ranges; throw exceptions for runtime conditions
+  - At return, assert guarantees on outputs (lengths, ranges, relations)
+- **Assertions vs exceptions**
+  - Use `assert` (JVM flag `-ea`) for programmer errors/invariants
+  - Use `IllegalArgumentException`, `IllegalStateException`, etc. for expected runtime validation
+- **Performance**
+  - Keep checks O(1) or linear in touched data; avoid allocations in assertions
+- **State validation**
+  - Validate state transitions (open/closed, started/stopped)
+  - For arrays/collections, check boundaries and capacities
+- **Readability**
+  - One check per fact; clear messages
+
+Example:
+```java
+List<Integer> process(List<Integer> items) {
+    assert items != null && !items.isEmpty();
+    for (Integer v : items) { assert v != null; }
+
+    List<Integer> out = new ArrayList<>();
+    for (Integer v : items) if (v >= 0) out.add(v);
+
+    assert out.size() <= items.size();
+    if (out.isEmpty()) {
+        boolean allNeg = true;
+        for (Integer v : items) if (v >= 0) { allNeg = false; break; }
+        assert allNeg;
+    }
+    return out;
+}
+```

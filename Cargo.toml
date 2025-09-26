@@ -1,3 +1,6 @@
 [workspace]
 members = ["circuit-breaker-simulator", "load-balancer-simulator"]
 resolver = "2"
+
+[workspace.dependencies]
+rand = "0.9.2"

@@ -1,0 +1,39 @@
+---
+alwaysApply: false
+tags: [language:go, concern:testing]
+when: writing Go tests
+then: write table-driven, public-API tests; fast and parallel by default
+---
+
+### go-testing-style rules
+
+- **Test public API only**
+  - Exercise exported funcs/types; avoid testing unexported internals
+  - Validate observable behavior and workflows
+- **Integration/E2E over unit**
+  - Prefer table-driven tests with input/output pairs
+  - Cover success and error paths
+- **Parallel & isolated**
+  - Use `t.Parallel()`; unique data per test; no cleanup reliance
+- **Check functions**
+  - Simple checks: `if got != want { t.Fatalf(...) }`
+- **Branch coverage**
+  - Ensure both true/false branches and boundary cases are tested
+- **No mocks unless necessary**
+  - Avoid mocking internals; prefer real workflows and deterministic inputs
+- **Performance**
+  - Keep tests fast; small datasets; avoid external deps unless part of API
+- **Property testing**
+  - Use `testing/quick` or `gopter` for invariants when valuable
+
+Example:
+```go
+func TestSelectSmallRequests(t *testing.T) {
+    t.Parallel()
+    reqs := []Request{{"a",10},{"b",15},{"c",30}}
+    got, err := SelectSmallRequests(reqs, 30)
+    if err != nil { t.Fatalf("unexpected error: %v", err) }
+    want := []Request{{"a",10},{"b",15}}
+    if !reflect.DeepEqual(got, want) { t.Fatalf("got %v want %v", got, want) }
+}
+```

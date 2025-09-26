@@ -1,0 +1,44 @@
+---
+alwaysApply: false
+tags: [language:java, concern:testing]
+when: writing Java tests
+then: test public APIs with data-driven, fast tests; use assertions and exceptions checks
+---
+
+### java-testing-style rules
+
+- **Test public API only**
+  - Exercise public methods/classes; avoid testing internals
+  - Validate observable behavior and workflows
+- **Integration/E2E over unit**
+  - Prefer table/data-driven tests with input/output pairs
+  - Cover success and error paths
+- **Parallel & isolated**
+  - Unique data per test; avoid shared state; no cleanup reliance
+- **Check functions**
+  - Use plain assertions: `assertEquals(want, got)` or `assertThrows(...)`
+- **Branch coverage**
+  - Ensure both true/false branches and boundary cases are tested
+- **No mocks unless necessary**
+  - Avoid mocking internals; prefer real workflows and deterministic inputs
+- **Performance**
+  - Keep tests fast; small datasets; avoid external deps unless part of API
+- **Property testing**
+  - Use jqwik/QuickTheories for invariants when valuable
+
+Example with JUnit:
+```java
+@Test
+void selectSmallRequests_happyPath() {
+    List<Request> reqs = List.of(new Request("a",10), new Request("b",15), new Request("c",30));
+    List<Request> got = selectSmallRequests(reqs, 30);
+    List<Request> want = List.of(new Request("a",10), new Request("b",15));
+    assertEquals(want, got);
+}
+
+@Test
+void selectSmallRequests_rejectsNegative() {
+    List<Request> reqs = List.of(new Request("a",-1));
+    assertThrows(IllegalArgumentException.class, () -> selectSmallRequests(reqs, 100));
+}
+```

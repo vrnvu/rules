@@ -1,0 +1,82 @@
+---
+alwaysApply: false
+tags: [language:rust, concern:testing]
+when: writing Rust tests
+then: test public APIs with integration-style, fast-by-default checks; cover branches
+---
+
+---
+description: Rust testing style rules for integration and E2E testing
+globs:
+alwaysApply: true
+---
+
+# Rust Testing Style Rules
+
+## Core Principles
+
+- Do not comment tests, don't add explanations of what we are doing
+
+### Test Public API Only
+- Test functions users actually call
+- Test complete user workflows
+- Test observable behavior, not implementation details
+- Always assert the result after calling a Public API under test
+
+### Avoid Unit Testing and comments
+- Don't test individual functions in isolation
+- Don't test internal functions
+- Don't use mock objects
+- Don't comment what the test is doing, code should be self-explanatory
+
+## Parallelization Rules
+
+- Assume database is dirty
+- Assume other tests are running
+- Use unique test data for each test
+- Never clean up after tests
+- Don't rely on shared state
+
+## Test Organization
+
+- Write integration tests
+- Write E2E tests
+- Use check functions for API encapsulation
+- A check function has the form `assert_eq!(got, want)` or `assert_eq!(input, output)`
+- Use data-driven tests with input/output pairs
+- Keep tests fast and parallelizable, always parallelize tests
+
+## Rust-Specific Testing
+
+### Test Structure
+- Use `#[cfg(test)]` modules for tests
+- Place tests in the same file as the code being tested
+- Use `cargo test` for running tests
+- Use `#[test]` attribute for test functions
+
+### Error Testing
+- Test both success and error cases
+- Use `Result<T, E>` for error handling in tests
+- Test panic conditions with `#[should_panic]` when appropriate
+
+### Property Testing
+- Use `proptest` for property-based testing
+- Generate random inputs and verify invariants
+- Test edge cases and boundary conditions
+
+### Exhaustive Code Branch Coverage
+- Test all possible code branches and execution paths
+- Ensure every `if` statement has both true and false branches tested
+- Ensure happy paths and failure paths are covered in test coverage
+
+## Anti-Patterns
+
+- Unit testing
+- Testing internal functions
+- Database cleanup
+- Clean state assumptions
+- Use mocks
+- Testing implementation details
+- Slow test suites
+- Flaky tests
+- Tight coupling to implementation

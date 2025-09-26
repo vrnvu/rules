@@ -1,0 +1,49 @@
+---
+alwaysApply: false
+tags: [language:java, concern:programming]
+when: writing or modifying Java code
+then: favor simple methods, composition, and precise exceptions; avoid deep hierarchies
+---
+
+### java-programming-style rules
+
+- **Simplicity first**
+  - Prefer clear methods and data transformations over deep inheritance
+  - Small, focused methods; explicit parameters and return values
+- **Data over objects**
+  - Prefer records/POJOs and composition; avoid deep hierarchies
+- **Control flow**
+  - Guard clauses and early returns; avoid deep nesting
+  - Exhaustively handle enums with `switch`
+- **Performance and memory**
+  - Pre-size collections; reuse buffers; minimize allocations
+  - Avoid copying large data; pass views/slices (e.g., `subList`) where safe
+- **Error handling**
+  - Use precise exceptions; fail fast on invalid inputs
+  - Avoid exception-driven normal control flow
+- **No over-engineering**
+  - Minimize generics/reflection; avoid recursion in hot paths
+- **Naming & formatting**
+  - Descriptive names; avoid abbreviations; standard Java conventions
+- **Determinism and limits**
+  - Set explicit upper bounds on loops/resources; consider bandwidth/latency
+
+Example:
+```java
+record Request(String id, int sizeBytes) {}
+
+List<Request> selectSmallRequests(List<Request> reqs, int maxTotal) {
+    if (maxTotal < 0) throw new IllegalArgumentException("maxTotal must be non-negative");
+    int total = 0;
+    List<Request> out = new ArrayList<>(reqs.size());
+    for (Request r : reqs) {
+        if (r.sizeBytes() < 0) throw new IllegalArgumentException("size must be non-negative");
+        if (total + r.sizeBytes() > maxTotal) break;
+        out.add(r);
+        total += r.sizeBytes();
+    }
+    int sum = out.stream().mapToInt(Request::sizeBytes).sum();
+    assert sum == total : "accounting invariant";
+    return out;
+}
+```

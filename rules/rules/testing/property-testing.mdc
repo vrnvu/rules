@@ -1,0 +1,185 @@
+---
+enabled: false
+tags: [concern:testing, type:optional]
+note: Disabled by default; enable when property testing is in scope for this repo
+---
+
+# Property-Based Testing Rules
+
+## Reference
+
+Our property testing approach incorporates TigerBeetle's model-based testing methodology:
+- [It Takes Two to Contract](https://tigerbeetle.com/blog/2023-12-27-it-takes-two-to-contract/) - Two-party contracts and different code paths
+- [Snapshot Testing For the Masses](https://tigerbeetle.com/blog/2024-05-14-snapshot-testing-for-the-masses/) - Data-driven testing principles
+
+## Core Principles
+
+### Model-Based Testing
+- Use a reference implementation (model) that behaves identically to the system under test
+- Test complete data transformations from input to output
+- Compare behavior between model and implementation under any sequence of operations
+- Focus on testing public API methods exhaustively
+
+### TigerBeetle Two-Path Testing
+- Test the same computation through two different code paths
+- Verify that different paths lead to identical results
+- Use hash-chaining and checksums for cryptographic binding
+- Test state consistency across different replicas/processes
+
+### Exhaustive API Coverage
+- Use reflection to extract all public methods from the data structure
+- Ensure every public method is tested in property tests
+- Compiler errors should remind you to add tests for new public methods
+- Test the complete public interface, not individual components
+
+## Property Testing Patterns
+
+### Reference Model Approach
+```python
+# Use a simple, correct reference implementation
+class ReferenceModel:
+    def __init__(self):
+        self.data = []
+    
+    def push(self, item):
+        self.data.append(item)
+    
+    def pop(self):
+        return self.data.pop(0) if self.data else None
+    
+    def empty(self):
+        return len(self.data) == 0
+
+# Test against reference model
+def test_data_structure_properties():
+    implementation = DataStructure()
+    model = ReferenceModel()
+    
+    for _ in range(1000):
+        operation = random.choice(get_public_methods(DataStructure))
+        if operation == 'push':
+            item = random_item()
+            implementation.push(item)
+            model.push(item)
+        elif operation == 'pop':
+            assert implementation.pop() == model.pop()
+        elif operation == 'empty':
+            assert implementation.empty() == model.empty()
+```
+
+### Operation Sequence Testing
+- Generate random sequences of operations
+- Test that implementation matches model behavior
+- Use same inputs for both implementation and model
+- Verify all observable outputs are identical
+
+### TigerBeetle Consensus Example
+```rust
+// Test consensus protocol through different paths
+// Path 1: Normal message processing
+let result1 = replica.process_message(message.clone());
+
+// Path 2: Recovery from different state
+let result2 = replica.recover_and_process(message.clone());
+
+// Both paths should result in identical state
+assert_eq!(result1.checksum(), result2.checksum());
+assert_eq!(result1.commit_index, result2.commit_index);
+```
+
+## Swarm Testing
+
+### Non-Uniform Distribution
+- Don't use uniform random selection for operations
+- Some operation combinations are more likely to reveal bugs
+- Sample operation probabilities themselves, not just operations
+- Focus on interesting edge cases and boundary conditions
+
+### Weighted Random Selection
+```python
+class OperationWeights:
+    def __init__(self, push_weight=1, pop_weight=1, empty_weight=1):
+        self.push = push_weight
+        self.pop = pop_weight
+        self.empty = empty_weight
+
+def weighted_random_operation(weights: OperationWeights):
+    total = weights.push + weights.pop + weights.empty
+    pick = random.randint(0, total - 1)
+    
+    if pick < weights.push:
+        return 'push'
+    pick -= weights.push
+    if pick < weights.pop:
+        return 'pop'
+    return 'empty'
+
+# Randomize the weights themselves
+def random_operation_weights():
+    # Randomly select which operations to focus on
+    active_operations = random.sample(['push', 'pop', 'empty'], 
+                                    k=random.randint(1, 3))
+    
+    weights = OperationWeights(push=0, pop=0, empty=0)
+    for op in active_operations:
+        setattr(weights, op, random.randint(1, 100))
+    
+    return weights
+```
+
+### Swarm Testing Benefits
+- Better coverage of operation combinations
+- More likely to find bugs in complex interactions
+- Avoids uniform distribution that may miss edge cases
+- Tests different "swarms" of operation patterns
+
+## Implementation Guidelines
+
+### Test Structure
+- Use large iteration counts (1000+ operations)
+- Generate random but valid inputs
+- Compare complete state between model and implementation
+- Test error conditions and edge cases
+
+### Input Generation
+- Generate realistic test data
+- Include boundary values and edge cases
+- Use deterministic seeds for reproducible tests
+- Generate data that exercises different code paths
+
+### State Validation
+- Assert invariants hold after each operation
+- Verify model and implementation stay in sync
+- Check that all observable behavior matches
+- Validate error conditions are handled identically
+
+## Best Practices
+
+### Model Selection
+- Choose simple, obviously correct reference implementation
+- Model should have same public interface as implementation
+- Prefer models that are easy to understand and verify
+- Use different algorithms for model vs implementation
+
+### Test Coverage
+- Test all public methods of the data structure
+- Include error conditions and edge cases
+- Test with various input sizes and patterns
+- Verify performance characteristics match expectations
+
+### Debugging Failed Tests
+- Log the sequence of operations that caused failure
+- Include state of both model and implementation
+- Provide clear diff between expected and actual behavior
+- Make it easy to reproduce failing test cases
+
+## Anti-Patterns
+
+- Testing implementation details instead of behavior
+- Using uniform random selection for all operations
+- Not testing all public methods
+- Ignoring edge cases and error conditions
+- Using complex models that are hard to verify
+- Not comparing complete state between model and implementation
+- Testing individual components instead of complete workflows
+- Using fixed operation sequences instead of random generation
